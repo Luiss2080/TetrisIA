@@ -98,14 +98,44 @@ public class Tablero {
         }
     }
     
+    // Desplazamientos horizontales que se intentan, en orden, cuando una
+    // rotación no cabe en el sitio actual ("wall kicks"). No es la tabla
+    // completa de Super Rotation System (SRS) de los Tetris modernos —esa
+    // tabla depende de la pieza y del par de rotaciones concreto—, pero
+    // cubre el mismo problema real: sin esto, rotar una pieza pegada a una
+    // pared o a un bloque vecino simplemente fallaba en silencio aunque
+    // hubiera espacio suficiente un par de columnas más allá.
+    private static final int[] DESPLAZAMIENTOS_KICK = {0, -1, 1, -2, 2};
+
     public boolean rotarPieza() {
         if (piezaActual == null) return false;
-        
+
         int nuevaRotacion = (piezaActual.getRotacion() + 1) % 4;
-        if (esMovimientoValido(piezaActual, piezaActual.getX(), piezaActual.getY(), nuevaRotacion)) {
-            piezaActual.rotar();
-            return true;
+        int xBase = piezaActual.getX();
+        int yBase = piezaActual.getY();
+
+        // 1) Intentar únicamente un desplazamiento horizontal (caso típico:
+        //    pared izquierda/derecha o torre vecina).
+        for (int dx : DESPLAZAMIENTOS_KICK) {
+            if (esMovimientoValido(piezaActual, xBase + dx, yBase, nuevaRotacion)) {
+                piezaActual.setX(xBase + dx);
+                piezaActual.rotar();
+                return true;
+            }
         }
+
+        // 2) Último recurso: combinar el desplazamiento horizontal con un
+        //    kick vertical de una celda hacia arriba (útil, por ejemplo,
+        //    para la pieza I vertical rotando cerca del suelo).
+        for (int dx : DESPLAZAMIENTOS_KICK) {
+            if (esMovimientoValido(piezaActual, xBase + dx, yBase - 1, nuevaRotacion)) {
+                piezaActual.setX(xBase + dx);
+                piezaActual.setY(yBase - 1);
+                piezaActual.rotar();
+                return true;
+            }
+        }
+
         return false;
     }
     
