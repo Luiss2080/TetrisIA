@@ -122,13 +122,6 @@ public class Pieza {
         y++;
     }
     
-    public void caerCompleto() {
-        while (true) {
-            y++;
-            // El tablero validará si puede seguir cayendo
-        }
-    }
-    
     // Getters y Setters
     public Tipo getTipo() { return tipo; }
     public int[][] getForma() { return forma; }
