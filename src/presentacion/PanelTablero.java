@@ -234,6 +234,13 @@ public class PanelTablero extends JPanel {
     public static Color obtenerColorPieza(Pieza.Tipo tipo) {
         return COLORES_PIEZAS.get(tipo);
     }
+
+    // Expone el tamaño de celda para que capas superpuestas (p. ej. el
+    // sistema de efectos visuales) puedan ubicar elementos en coordenadas
+    // consistentes con el tablero dibujado aquí.
+    public static int getTamanoCelda() {
+        return TAMANO_CELDA;
+    }
     
     // Método para actualizar el tablero
     public void actualizarTablero(Tablero nuevoTablero) {
