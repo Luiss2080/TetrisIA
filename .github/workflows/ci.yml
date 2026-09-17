@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  JUNIT_CONSOLE_VERSION: 1.10.2
+
+jobs:
+  build-and-test:
+    name: Build and test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ 17, 21 ]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      # El proyecto no usa Maven/Gradle: se compila con javac plano, igual
+      # que hace ejecutar.bat para uso local. Mantenemos CI alineado con
+      # eso en vez de introducir un build tool nuevo solo para el pipeline.
+      - name: Compile game sources
+        run: |
+          mkdir -p build/main
+          javac -d build/main $(find src/main src/logica src/presentacion -name "*.java")
+
+      - name: Check for a test suite
+        id: tests
+        run: |
+          if find src/test -name "*.java" 2>/dev/null | grep -q .; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download JUnit Platform Console Standalone
+        if: steps.tests.outputs.present == 'true'
+        run: |
+          curl -sL -o junit-platform-console-standalone.jar \
+            "https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/${JUNIT_CONSOLE_VERSION}/junit-platform-console-standalone-${JUNIT_CONSOLE_VERSION}.jar"
+
+      - name: Compile and run tests
+        if: steps.tests.outputs.present == 'true'
+        run: |
+          mkdir -p build/test
+          javac -cp "build/main:junit-platform-console-standalone.jar" -d build/test \
+            $(find src/test -name "*.java")
+          java -jar junit-platform-console-standalone.jar execute \
+            -cp "build/main:build/test" \
+            --scan-classpath \
+            --details=tree \
+            --fail-if-no-tests
+
+      - name: No tests found yet
+        if: steps.tests.outputs.present == 'false'
+        run: |
+          echo "::warning::No hay clases de prueba en src/test todavía; solo se verificó que el código compila."
