@@ -10,10 +10,11 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 public class VentanaPrincipal extends JFrame implements KeyListener {
-    
+
     private Tablero tablero;
     private PanelTablero panelTablero;
     private PanelControles panelControles;
+    private EfectosVisuales.AdministradorEfectos administradorEfectos;
     private Timer gameTimer;
     private Timer iaTimer;
     private boolean juegoEnPausa;
@@ -38,11 +39,12 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
         tablero = new Tablero();
         panelTablero = new PanelTablero(tablero);
         panelControles = new PanelControles(this);
-        
+
         JPanel panelInfo = crearPanelInformacion();
-        
+        JLayeredPane capasTablero = crearCapasTablero();
+
         setLayout(new BorderLayout());
-        add(panelTablero, BorderLayout.CENTER);
+        add(capasTablero, BorderLayout.CENTER);
         add(panelControles, BorderLayout.SOUTH);
         add(panelInfo, BorderLayout.EAST);
         
@@ -76,6 +78,26 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
         });
     }
     
+    // Superpone panelTablero (el tablero de juego) y administradorEfectos
+    // (partículas y textos flotantes) en un JLayeredPane del mismo tamaño,
+    // para que los efectos se dibujen encima del tablero sin robarle el
+    // foco de teclado ni participar en el layout de eventos de ratón.
+    private JLayeredPane crearCapasTablero() {
+        Dimension tamano = panelTablero.getPreferredSize();
+
+        administradorEfectos = new EfectosVisuales.AdministradorEfectos(panelTablero);
+        administradorEfectos.setBounds(0, 0, tamano.width, tamano.height);
+
+        JLayeredPane capas = new JLayeredPane();
+        capas.setPreferredSize(tamano);
+
+        panelTablero.setBounds(0, 0, tamano.width, tamano.height);
+        capas.add(panelTablero, JLayeredPane.DEFAULT_LAYER);
+        capas.add(administradorEfectos, JLayeredPane.PALETTE_LAYER);
+
+        return capas;
+    }
+
     private JPanel crearPanelInformacion() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -233,29 +255,58 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
             mostrarGameOver();
             return;
         }
-        
-        tablero.moverPiezaAbajo();
+
+        int puntuacionAntes = tablero.getPuntuacion();
+        boolean piezaFijada = !tablero.moverPiezaAbajo();
+        procesarEfectosTrasAccion(puntuacionAntes, piezaFijada);
+
         actualizarInterfaz();
         panelTablero.repaint();
     }
-    
+
     private void ejecutarMovimientoIA() {
         if (tablero.isJuegoTerminado()) {
             mostrarGameOver();
             return;
         }
-        
+
+        int puntuacionAntes = tablero.getPuntuacion();
         boolean movimientoEjecutado = HeuristicaIA.ejecutarMejorMovimiento(tablero);
-        
-        if (!movimientoEjecutado && !tablero.moverPiezaAbajo()) {
-            // Si la IA no puede hacer un movimiento y la pieza no puede bajar más
-            // el juego debería continuar con la siguiente pieza
-        }
-        
+
+        // Si la IA no encontró movimiento (solo puede pasar con el tablero
+        // prácticamente lleno), moverPiezaAbajo() se encarga de fijar la
+        // pieza de todas formas y, si corresponde, marcar game over.
+        boolean piezaFijada = movimientoEjecutado || !tablero.moverPiezaAbajo();
+        procesarEfectosTrasAccion(puntuacionAntes, piezaFijada);
+
         actualizarInterfaz();
         panelTablero.repaint();
     }
-    
+
+    // Punto único donde se disparan los efectos visuales (partículas y
+    // textos flotantes) inmediatamente después de una acción que puede
+    // haber fijado una pieza al tablero. Solo tiene sentido consultar
+    // tablero.getLineasAEliminar() justo después de una fijación real:
+    // esa lista se recalcula por completo en cada fijación, así que aquí
+    // siempre refleja el resultado de ESTA acción, no de una anterior.
+    private void procesarEfectosTrasAccion(int puntuacionAntes, boolean piezaFijada) {
+        if (!piezaFijada) return;
+
+        int lineasEliminadas = tablero.getLineasAEliminar().size();
+        if (lineasEliminadas > 0) {
+            int puntosGanados = tablero.getPuntuacion() - puntuacionAntes;
+            int cx = panelTablero.getWidth() / 2 - 60;
+            int cy = panelTablero.getHeight() / 2;
+
+            administradorEfectos.mostrarLineasCompletadas(lineasEliminadas, cx, cy);
+            administradorEfectos.mostrarPuntuacion(puntosGanados, cx + 40, cy + 35);
+        }
+
+        if (tablero.isJuegoTerminado()) {
+            administradorEfectos.mostrarGameOver();
+        }
+    }
+
     private void actualizarInterfaz() {
         labelPuntuacion.setText("Puntuación: " + tablero.getPuntuacion());
         labelLineas.setText("Líneas: " + tablero.getLineasCompletadas());
@@ -296,7 +347,10 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         if (!juegoIniciado || juegoEnPausa || modoIA) return;
-        
+
+        int puntuacionAntes = tablero.getPuntuacion();
+        boolean piezaFijada = false;
+
         switch (e.getKeyCode()) {
             case KeyEvent.VK_LEFT:
                 tablero.moverPiezaIzquierda();
@@ -305,13 +359,14 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
                 tablero.moverPiezaDerecha();
                 break;
             case KeyEvent.VK_DOWN:
-                tablero.moverPiezaAbajo();
+                piezaFijada = !tablero.moverPiezaAbajo();
                 break;
             case KeyEvent.VK_UP:
                 tablero.rotarPieza();
                 break;
             case KeyEvent.VK_SPACE:
                 tablero.caerPiezaCompleta();
+                piezaFijada = true; // caerPiezaCompleta() siempre fija la pieza
                 break;
             case KeyEvent.VK_P:
                 if (juegoEnPausa) {
@@ -321,7 +376,9 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
                 }
                 break;
         }
-        
+
+        procesarEfectosTrasAccion(puntuacionAntes, piezaFijada);
+
         actualizarInterfaz();
         panelTablero.repaint();
     }
