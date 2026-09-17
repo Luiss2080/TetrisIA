@@ -32,7 +32,7 @@ public class VentanaPrincipal extends JFrame implements KeyListener {
     }
     
     private void initComponents() {
-        setTitle("Tetris - Juego");
+        setTitle("TetrisIA");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         
