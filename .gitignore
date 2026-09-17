@@ -1,0 +1,19 @@
+# Compiled class files
+bin/
+out/
+*.class
+
+# Test dependencies downloaded locally (not vendored in the repo)
+lib/
+
+# IDE metadata
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS cruft
+Thumbs.db
+.DS_Store
