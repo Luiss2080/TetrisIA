@@ -1,8 +1,8 @@
 @echo off
-title Tetris - Juego en Java
+title TetrisIA
 echo.
 echo ========================================
-echo          TETRIS - JAVA
+echo               TETRISIA
 echo ========================================
 echo.
 echo Iniciando el juego...
