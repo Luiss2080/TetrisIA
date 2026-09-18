@@ -1,180 +1,164 @@
-# 🎮🧠 TetrisIA
+<div align="center">
+  <img src="docs/assets/logo.svg" width="96" alt="Logo de TetrisIA" />
+  <h1>TetrisIA</h1>
+  <p><b>Tetris de escritorio en Java/Swing con un piloto automático heurístico, sin dependencias externas.</b></p>
+  <img src="https://img.shields.io/badge/estado-funcional-25A162?style=for-the-badge" alt="Estado: funcional" />
+  <img src="https://img.shields.io/badge/Java-Swing-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java Swing" />
+  <img src="https://img.shields.io/badge/tests-42_JUnit_5-25A162?style=for-the-badge" alt="42 tests" />
+  <img src="https://github.com/Luiss2080/TetrisIA/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  <p>
+    <a href="#-inicio-rápido">Inicio rápido</a> ·
+    <a href="#-características">Características</a> ·
+    <a href="#-arquitectura">Arquitectura</a> ·
+    <a href="#-pruebas">Pruebas</a> ·
+    <a href="#-lo-que-todavía-no-existe">Limitaciones</a>
+  </p>
+</div>
 
-> Tetris clásico en Java/Swing con un modo de piloto automático real: una
-> heurística que evalúa altura, huecos, irregularidad de superficie y
-> líneas completadas para elegir dónde colocar cada pieza. Pensado para
-> quien quiera un Tetris de escritorio ligero (sin dependencias externas,
-> solo el JDK) para jugar, leer como referencia de la lógica clásica de
-> Tetris, o extender con su propia IA.
+TetrisIA es un Tetris clásico (tablero de 10×20, 7 tetrominós) con un modo manual por teclado y un modo
+"IA" que coloca las piezas solo. La IA es un **evaluador heurístico de una sola pieza**, no una red
+entrenada ni una búsqueda profunda: sirve como referencia legible de la lógica de Tetris y como base para
+experimentar con tu propia heurística. No es un clon fiel de ningún Tetris comercial.
 
-![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=java&logoColor=white)
-![Swing](https://img.shields.io/badge/Swing-25D366?style=for-the-badge&logo=java&logoColor=white)
-![Tests](https://img.shields.io/badge/JUnit_5-38_tests-25A162?style=for-the-badge&logo=junit5&logoColor=white)
+## 🎬 Vista rápida
 
-## Características
+Captura real del juego con el modo IA activo (la ventana muestra los efectos de líneas completadas):
 
-- **7 tetrominós clásicos** (I, J, L, O, S, T, Z) sobre un tablero estándar
-  de 10×20, con las 4 rotaciones correctas de cada pieza.
-- **Colisión por celda real**, no por caja delimitadora: una pieza en forma
-  de L o de J puede solaparse con el hueco de otra pieza vecina sin que el
-  juego lo rechace incorrectamente (cubierto por tests, ver más abajo).
-- **Wall kicks** al rotar: si una rotación no cabe exactamente donde está
-  la pieza, el juego prueba automáticamente unos pocos desplazamientos
-  laterales (y, como último recurso, uno hacia arriba) antes de rechazar
-  el movimiento — no es la tabla completa de Super Rotation System (SRS)
-  de los Tetris modernos, pero soluciona el caso real de "la pieza no
-  rota porque está pegada a la pared".
-- **Eliminación de líneas correcta**, incluidas líneas múltiples no
-  contiguas (p. ej. se completan la fila 3 y la fila 7 pero no las de
-  enmedio): se verificó explícitamente que no se duplica ni se pierde
-  ninguna fila al reacomodar el tablero.
-- **Modo manual** con teclado y **modo IA** (piloto automático) alternables
-  desde la interfaz.
-- **Efectos visuales**: parpadeo de las líneas que se completan, overlay de
-  fin de partida, y un sistema de partículas y texto flotante (mensajes
-  SINGLE/DOUBLE/TRIPLE/TETRIS!!!!, puntos ganados, explosión de partículas
-  en un Tetris o al perder) superpuesto al tablero.
-- **38 tests JUnit 5** cubriendo colisión, rotación, wall kicks,
-  eliminación de líneas (incluyendo el caso no contiguo), puntuación,
-  detección de game over y el modo IA — ver la sección [Tests](#tests).
-- **CI en GitHub Actions**: cada push/PR compila el juego y corre la suite
-  de tests en JDK 17 y 21.
+<div align="center">
+  <img src="docs/screenshots/modo-ia.png" width="360" alt="TetrisIA con el modo IA jugando: tablero, puntuación, siguiente pieza y botones de control" />
+</div>
 
-### Sobre el modo IA (honestidad ante todo)
+## ✨ Características
 
-El "cerebro" (`logica/HeuristicaIA.java`) **no** es una IA entrenada ni usa
-búsqueda en profundidad sobre varias piezas futuras. Es un evaluador
-heurístico clásico de una sola pieza:
+| Característica | Detalle |
+|:---|:---|
+| Piezas y rotaciones | 7 tetrominós (I, J, L, O, S, T, Z) con sus 4 rotaciones (`Pieza.java`) |
+| Colisión por celda | Se comprueba celda a celda, no por caja delimitadora (`Tablero.esMovimientoValido`) |
+| Wall kick simple | Si la rotación no cabe, prueba una lista fija de desplazamientos; no es la tabla SRS completa |
+| Líneas | Elimina líneas completas, incluidas varias no contiguas, sin duplicar ni perder filas |
+| Puntuación | 100 / 300 / 500 / 800 puntos por 1 / 2 / 3 / 4 líneas (escala propia, sin niveles) |
+| Modo IA | Prueba todas las columnas × rotaciones de la pieza actual y elige la de mejor puntuación |
+| Efectos | Parpadeo de líneas, textos flotantes (SINGLE/DOUBLE/TRIPLE/TETRIS), partículas y overlay de game over |
+| Sin dependencias | Solo el JDK: Swing, `Graphics2D` y `javax.swing.Timer` |
 
-1. Para la pieza actual, prueba **todas** las combinaciones de columna ×
-   rotación posibles.
-2. Simula la caída completa de cada una.
-3. Puntúa el tablero resultante con una fórmula fija:
+### Cómo decide la IA
 
-   ```
-   puntuación = (líneas_completadas × 2.0)
-              − (altura_total × 0.5)
-              − (huecos × 0.75)
-              − (irregularidad_superficie × 0.3)
-              − (altura_máxima × 0.8)
-   ```
+`HeuristicaIA` simula la caída de la pieza actual en cada combinación de columna y rotación y puntúa el
+tablero resultante con pesos fijos:
 
-4. Elige la colocación con mayor puntuación.
+```text
+puntuación = líneas_completadas × 2.0
+           − altura_total × 0.5
+           − huecos × 0.75
+           − irregularidad_superficie × 0.3
+           − altura_máxima × 0.8
+```
 
-No mira la pieza *siguiente* (`Tablero.getSiguientePieza()` existe pero la
-IA no la usa para decidir), no hace *beam search* ni *lookahead* multi-pieza,
-y los pesos son fijos (no se ajustan solos ni se entrenaron). Es una IA real
-y funcional — juega razonablemente bien y prioriza activamente completar
-líneas por encima de simplemente apilar piezas — pero es una heurística de
-una sola pieza, no un algoritmo "avanzado" en el sentido de búsqueda
-profunda o aprendizaje.
-
-## Cómo usar
-
-Desde la ventana principal: **Iniciar** empieza la partida, **Pausar** la
-congela, **Reiniciar** la resetea, y **Modo IA** activa o desactiva el
-piloto automático (mientras está activo, el teclado no controla la pieza).
+No usa la pieza siguiente, no hace búsqueda de varias piezas y los pesos no se aprenden ni se ajustan.
 
 ### Controles (modo manual)
 
 | Tecla | Acción |
 |:---:|:---|
 | ← / → | Mover la pieza |
-| ↓ | Caída suave (acelerar) |
-| ↑ | Rotar (con wall kick automático) |
-| Espacio | Caída completa instantánea (hard drop) |
+| ↓ | Caída suave |
+| ↑ | Rotar (con wall kick) |
+| Espacio | Caída instantánea |
 | P | Pausar / reanudar |
 
-## Instalación y uso local
+Botones de la ventana: **Iniciar**, **Pausar**, **Reiniciar** y **Modo IA** (con la IA activa el teclado
+no controla la pieza).
 
-Requiere un JDK 8 o superior instalado (`javac` en el `PATH`).
+## 🏗️ Arquitectura
 
-```bash
-# Clonar y entrar al proyecto
-git clone https://github.com/Luiss2080/TetrisIA.git
-cd TetrisIA
+La lógica (`logica/`) no depende de Swing; la interfaz (`presentacion/`) solo la dibuja y la maneja.
 
-# Windows: lanzador de un solo clic (compila si hace falta y ejecuta)
-ejecutar.bat
-
-# Compilación manual (cualquier sistema operativo)
-javac -d bin $(find src/main src/logica src/presentacion -name "*.java")   # Linux/macOS
-javac -d bin src\main\*.java src\logica\*.java src\presentacion\*.java     # Windows (cmd)
-
-# Ejecutar
-java -cp bin main.Main
+```mermaid
+flowchart TD
+    Main["main.Main"] --> Ventana["presentacion.VentanaPrincipal<br/>(timers y teclado)"]
+    Ventana --> PanelTab["PanelTablero<br/>(render)"]
+    Ventana --> PanelCtl["PanelControles<br/>(botones)"]
+    Ventana --> Efectos["EfectosVisuales<br/>(partículas y textos)"]
+    Ventana --> Tablero["logica.Tablero<br/>(estado, colisión, líneas, puntos)"]
+    Ventana -->|"modo IA"| IA["logica.HeuristicaIA"]
+    IA --> Tablero
+    Tablero --> Pieza["logica.Pieza<br/>(formas y rotaciones)"]
 ```
 
-No hay ningún paso de instalación adicional: es Java + Swing puro, sin
-dependencias externas en tiempo de ejecución.
+<details>
+<summary>Estructura de carpetas</summary>
 
-## Tecnologías
-
-| Tecnología | Uso |
-|:---:|:---|
-| Java SE (Swing, `javax.swing.Timer`) | Lógica del juego e interfaz gráfica |
-| `Graphics2D` | Renderizado del tablero y los efectos visuales |
-| JUnit 5 (Jupiter) | Suite de tests de la lógica del juego |
-| GitHub Actions | Integración continua (compilación + tests en JDK 17/21) |
-
-No usa Maven ni Gradle: se compila con `javac` directamente, igual que
-`ejecutar.bat`.
-
-## Tests
-
-El proyecto no trae un `pom.xml` ni un `build.gradle`, así que los tests se
-compilan y ejecutan con [JUnit Platform Console Standalone](https://junit.org/junit5/docs/current/user-guide/#running-tests-console-launcher):
-
-```bash
-# Descargar el runner de JUnit (una sola vez)
-curl -sL -o junit-platform-console-standalone.jar \
-  https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar
-
-# Compilar el juego y los tests
-javac -d build/main $(find src/main src/logica src/presentacion -name "*.java")
-javac -cp "build/main:junit-platform-console-standalone.jar" -d build/test $(find src/test -name "*.java")
-
-# Ejecutar la suite completa (38 tests)
-java -jar junit-platform-console-standalone.jar execute \
-  -cp "build/main:build/test" --scan-classpath --details=tree
-```
-
-En Windows, usa `;` en vez de `:` como separador de classpath.
-
-## Arquitectura del proyecto
-
-```
+```text
 TetrisIA/
 ├── src/
-│   ├── main/
-│   │   └── Main.java                # Punto de entrada
-│   ├── logica/                      # Modelo puro, sin dependencias de Swing
-│   │   ├── Tablero.java             # Estado del tablero, colisión, líneas, puntuación
-│   │   ├── Pieza.java               # Las 7 formas y sus 4 rotaciones
-│   │   └── HeuristicaIA.java        # Evaluador heurístico del modo IA
-│   ├── presentacion/
-│   │   ├── VentanaPrincipal.java    # Ventana, timers, entrada de teclado
-│   │   ├── PanelTablero.java        # Render del tablero y la pieza actual
-│   │   ├── PanelControles.java      # Botones (Iniciar/Pausar/Reiniciar/Modo IA)
-│   │   └── EfectosVisuales.java     # Partículas y textos flotantes
-│   └── test/
-│       └── logica/                  # Tests JUnit 5 (colisión, rotación, líneas, IA...)
-├── .github/workflows/ci.yml         # Compilación + tests en cada push/PR
-├── ejecutar.bat                     # Lanzador rápido para Windows
+│   ├── main/Main.java
+│   ├── logica/            Tablero, Pieza, HeuristicaIA
+│   ├── presentacion/      VentanaPrincipal, PanelTablero, PanelControles, EfectosVisuales
+│   └── test/logica/       6 clases de prueba JUnit 5
+├── .github/workflows/ci.yml
+├── ejecutar.bat           Lanzador para Windows (compila y ejecuta)
 └── LICENSE
 ```
 
-## Limitaciones conocidas
+</details>
 
-Para no prometer de más:
+## 🚀 Inicio rápido
 
-- La puntuación (100/300/500/800 para 1–4 líneas) es una escala propia de
-  este juego, no la tabla clásica de NES Tetris; tampoco hay niveles que
-  aceleren la caída.
-- No hay sonido ni persistencia de estadísticas entre partidas todavía.
-- El wall kick es una lista fija de desplazamientos, no la tabla SRS
-  completa por pieza y transición.
+| Requisito | Versión |
+|:---|:---|
+| JDK con `javac` | El CI usa 17 y 21 (temurin); no se ha verificado con versiones anteriores |
 
-## Licencia
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/Luiss2080/TetrisIA.git
+   cd TetrisIA
+   ```
+2. Compila y ejecuta (no usa Maven ni Gradle):
+   ```bash
+   # Linux / macOS
+   mkdir -p bin && javac -d bin $(find src/main src/logica src/presentacion -name "*.java")
+   java -cp bin main.Main
+   ```
+   ```bat
+   :: Windows: compila y ejecuta con un solo comando
+   ejecutar.bat
+   ```
+3. Pulsa **Iniciar** y, si quieres, **Modo IA**.
 
-MIT — ver [`LICENSE`](./LICENSE).
+## 🧪 Pruebas
+
+Hay **42 pruebas** JUnit 5 en `src/test/logica` (verificadas localmente y ejecutadas en el CI con JDK 17 y 21).
+Cubren colisión, rotación y wall kick, limpieza de líneas (incluido el caso no contiguo), puntuación, game
+over, geometría de las piezas y la elección de movimientos de la IA. La interfaz Swing no tiene pruebas.
+
+<details>
+<summary>Cómo ejecutarlas</summary>
+
+Se usa el ejecutable [JUnit Platform Console Standalone](https://junit.org/junit5/docs/current/user-guide/#running-tests-console-launcher):
+
+```bash
+curl -sL -o junit-platform-console-standalone.jar \
+  https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar
+mkdir -p build/main build/test
+javac -d build/main $(find src/main src/logica src/presentacion -name "*.java")
+javac -cp "build/main:junit-platform-console-standalone.jar" -d build/test $(find src/test -name "*.java")
+java -jar junit-platform-console-standalone.jar execute -cp "build/main:build/test" --scan-classpath --details=tree
+```
+
+En Windows usa `;` en lugar de `:` como separador de classpath.
+
+</details>
+
+## 🚧 Lo que todavía no existe
+
+- Niveles o velocidad creciente: la caída va a un ritmo fijo.
+- Sonido y persistencia de récords o estadísticas.
+- La IA no mira la pieza siguiente ni planifica varias piezas.
+- El wall kick es una lista fija, no la tabla SRS por pieza y transición.
+- Pruebas de la interfaz gráfica.
+
+## 📄 Licencia
+
+MIT. Consulta [`LICENSE`](LICENSE).
+
+<div align="center"><sub>Hecho por Luiss2080 · Java, Swing y una heurística de una pieza</sub></div>
