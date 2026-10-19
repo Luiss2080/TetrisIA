@@ -1,0 +1,35 @@
+name: 🐛 Reporte de bug
+description: Algo no funciona como debería
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "¡Gracias por tomarte el tiempo de reportar un problema!"
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: ¿Qué pasó?
+      description: Describí el error y qué esperabas que ocurriera.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. Ir a '...'
+        2. Hacer clic en '...'
+        3. Ver el error
+    validations:
+      required: true
+  - type: input
+    id: entorno
+    attributes:
+      label: Entorno
+      placeholder: "Windows 11, Chrome 130, Node 22"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs o capturas
+      render: shell

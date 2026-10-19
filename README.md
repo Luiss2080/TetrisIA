@@ -6,6 +6,9 @@
   <img src="https://img.shields.io/badge/Java-Swing-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java Swing" />
   <img src="https://img.shields.io/badge/tests-42_JUnit_5-25A162?style=for-the-badge" alt="42 tests" />
   <img src="https://github.com/Luiss2080/TetrisIA/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  <img src="https://img.shields.io/badge/licencia-MIT-blue?style=flat-square" alt="Licencia MIT" />
+  <img src="https://img.shields.io/github/last-commit/Luiss2080/TetrisIA?style=flat-square" alt="Último commit" />
+  <img src="https://img.shields.io/badge/PRs-bienvenidos-brightgreen?style=flat-square" alt="PRs bienvenidos" />
   <p>
     <a href="#-inicio-rápido">Inicio rápido</a> ·
     <a href="#-características">Características</a> ·
@@ -156,6 +159,10 @@ En Windows usa `;` en lugar de `:` como separador de classpath.
 - La IA no mira la pieza siguiente ni planifica varias piezas.
 - El wall kick es una lista fija, no la tabla SRS por pieza y transición.
 - Pruebas de la interfaz gráfica.
+
+## 🤝 Contribuir
+
+¡Las contribuciones son bienvenidas! Leé la [guía de contribución](CONTRIBUTING.md) y el [código de conducta](CODE_OF_CONDUCT.md) antes de abrir un PR. Para bugs o ideas usá las [plantillas de issues](../../issues/new/choose); los problemas de seguridad se reportan según la [política de seguridad](SECURITY.md). ¿Dudas? Mirá [SUPPORT.md](SUPPORT.md). Los cambios por versión están en el [CHANGELOG](CHANGELOG.md).
 
 ## 📄 Licencia
 
